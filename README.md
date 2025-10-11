@@ -1,4 +1,4 @@
-# Hướng dẫn chạy Medical Image Captioning Pipeline
+# Medical Image Captioning Pipeline
 
 ## Cài đặt dependencies
 
@@ -133,3 +133,4 @@ factory_output.txt            # Output từ run_factory.py
 config_output.txt             # Output từ run_config.py
 my_caption.txt                # Output từ main.py
 ```
+
