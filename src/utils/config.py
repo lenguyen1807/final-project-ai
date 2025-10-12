@@ -4,7 +4,7 @@ Configuration management for the medical image captioning pipeline.
 
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 
 
@@ -14,11 +14,6 @@ class DatasetConfig:
     name: str
     data_dir: str
     image_dir: str
-    reports_file: str
-    projections_file: str
-    train_split: float = 0.8
-    val_split: float = 0.1
-    test_split: float = 0.1
     max_caption_length: int = 128
     image_size: list = field(default_factory=lambda: [224, 224])
 
@@ -142,6 +137,7 @@ class Config:
         """
         with open(config_path, 'r') as f:
             config_dict = yaml.safe_load(f)
+            print("Loading config from file ", config_path)
         
         return cls._from_dict(config_dict)
     
