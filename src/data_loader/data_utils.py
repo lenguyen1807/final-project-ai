@@ -13,59 +13,18 @@ from transformers import PreTrainedTokenizer
 
 from .dataset import MedicalImageDataset
 
-
 def load_indiana_dataset(
     data_dir: str,
-    reports_file: str = "indiana_reports.csv",
-    projections_file: str = "indiana_projections.csv",
-    image_dir: str = "images/images_normalized"
+    image_dir: str,
+    train_df: str,
+    val_df: str,
+    test_df: str
 ) -> pd.DataFrame:
-    """Load Indiana University chest X-ray dataset.
-    
-    Args:
-        data_dir: Root directory containing the dataset
-        reports_file: Name of the reports CSV file
-        projections_file: Name of the projections CSV file
-        image_dir: Name of the images directory
-        
-    Returns:
-        DataFrame with image paths and captions
-    """
-    # Load CSV files
-    reports_path = os.path.join(data_dir, reports_file)
-    projections_path = os.path.join(data_dir, projections_file)
-    
-    df_reports = pd.read_csv(reports_path)
-    df_projections = pd.read_csv(projections_path)
-    
-    # Create combined dataset
-    df = pd.DataFrame({'imgs': [], 'captions': []})
-    
-    for i in range(len(df_projections)):
-        uid = df_projections.iloc[i]['uid']
-        image_filename = df_projections.iloc[i]['filename']
-        
-        # Find corresponding report
-        matching_reports = df_reports.loc[df_reports['uid'] == uid]
-        
-        if not matching_reports.empty:
-            report_idx = matching_reports.index[0]
-            caption = df_reports.iloc[report_idx]['findings']
-            
-            # Skip if caption is NaN or empty
-            if pd.isna(caption) or not isinstance(caption, str):
-                continue
-            
-            # Add full image path
-            image_path = os.path.join(data_dir, image_dir, image_filename)
-            
-            df = pd.concat([
-                df, 
-                pd.DataFrame([{'imgs': image_path, 'captions': caption}])
-            ], ignore_index=True)
-    
-    return df
-
+    """Load the Indiana dataset."""
+    train_df = pd.read_csv(train_df)
+    val_df = pd.read_csv(val_df)
+    test_df = pd.read_csv(test_df)
+    return train_df, val_df, test_df
 
 def preprocess_dataframe(
     df: pd.DataFrame,
@@ -91,7 +50,6 @@ def preprocess_dataframe(
 
 
 def create_data_loaders(
-    df: pd.DataFrame,
     tokenizer: PreTrainedTokenizer,
     image_size: Tuple[int, int] = (224, 224),
     batch_size: int = 16,
@@ -126,22 +84,15 @@ def create_data_loaders(
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
     
-    # Split data
-    train_df, temp_df = train_test_split(
-        df, 
-        test_size=(val_split + test_split), 
-        random_state=42
-    )
-    
-    val_df, test_df = train_test_split(
-        temp_df, 
-        test_size=test_split / (val_split + test_split), 
-        random_state=42
-    )
-    
-    print(f"Data splits - Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
-    
-    # Create datasets
+    train_df = "chest-xrays-indiana-university/train_df.csv"
+    val_df = "chest-xrays-indiana-university/val_df.csv"
+    test_df = "chest-xrays-indiana-university/test_df.csv"
+
+   # Create datasets
+    train_df = pd.read_csv(train_df)
+    val_df = pd.read_csv(val_df)
+    test_df = pd.read_csv(test_df)
+
     train_dataset = MedicalImageDataset(
         image_paths=train_df['imgs'].tolist(),
         captions=train_df['captions'].tolist(),

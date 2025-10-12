@@ -1,17 +1,11 @@
 """
 Base decoder class for text generation in medical image captioning.
+Fixed version for Python compatibility.
 """
 
 import torch
 import torch.nn as nn
 from abc import ABC, abstractmethod
-try:
-    from typing import Dict, Any, Optional
-except ImportError:
-    # Fallback for older Python versions
-    Dict = dict
-    Any = object
-    Optional = object
 from transformers import PreTrainedTokenizer
 
 
@@ -44,10 +38,10 @@ class TextDecoder(nn.Module, ABC):
     def forward(
         self,
         input_ids: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        encoder_hidden_states: Optional[torch.Tensor] = None,
-        labels: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+        attention_mask: torch.Tensor = None,
+        encoder_hidden_states: torch.Tensor = None,
+        labels: torch.Tensor = None
+    ):
         """Forward pass through the decoder.
         
         Args:

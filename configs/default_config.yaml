@@ -4,13 +4,8 @@
 # Dataset Configuration
 dataset:
   name: "indiana_chest_xray"
-  data_dir: "/kaggle/input/chest-xrays-indiana-university"
-  image_dir: "images/images_normalized"
-  reports_file: "indiana_reports.csv"
-  projections_file: "indiana_projections.csv"
-  train_split: 0.8
-  val_split: 0.1
-  test_split: 0.1
+  data_dir: "chest-xrays-indiana-university"
+  image_dir: "chest-xrays-indiana-university/images/images_normalized"
   max_caption_length: 128
   image_size: [224, 224]
 

@@ -3,7 +3,6 @@ Text processing utilities for medical image captioning.
 """
 
 import re
-from typing import str
 
 
 def preprocess_text(
