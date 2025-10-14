@@ -3,16 +3,11 @@ set -e
 set -x
 
 # -----------------------------
-# Params
+# Install dependencies
 # -----------------------------
-REPORTS_PATH=${1:-"/kaggle/input/reports.csv"}
-LABELS_PATH=${2:-"/kaggle/working/labeled_reports.csv"}
-
-# -----------------------------
-# Install Python dependencies
-# -----------------------------
-pip install --upgrade pip
-pip install -r requirements.txt
+!sudo apt-get install swig -y
+!pip install --upgrade pip
+!pip install bllipparser nltk peft pyyaml bitsandbytes accelerate evaluate salesforce-lavis sentencepiece
 
 # Install NegBio from GitHub
 pip install git+https://github.com/ncbi-nlp/NegBio.git
@@ -33,9 +28,3 @@ python -c "from bllipparser import RerankingParser; RerankingParser.fetch_and_lo
 if [ ! -d "chexpert-labeler" ]; then
     git clone https://github.com/stanfordmlgroup/chexpert-labeler.git
 fi
-cd chexpert-labeler
-
-# -----------------------------
-# Run labeling
-# -----------------------------
-python label.py --reports_path "$REPORTS_PATH" --output_path "$LABELS_PATH"

@@ -4,8 +4,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import torch
-from PIL import Image
 from torch.utils.data import Dataset
+from torchvision.io import ImageReadMode, decode_image
+from torchvision.tv_tensors import TVTensor
 
 
 class KaggleChestXRayDataset(Dataset):
@@ -60,7 +61,7 @@ class KaggleChestXRayDataset(Dataset):
         try:
             # Open the image using Pillow
             # CRITICAL: Convert grayscale X-ray to 3-channel RGB as the ViT expects 3 channels.
-            image = Image.open(image_path).convert("RGB")
+            image_tensor = decode_image(image_path, mode=ImageReadMode.UNCHANGED)
         except FileNotFoundError:
             print(
                 f"WARNING: Image file not found at {image_path}. Skipping sample at index {index}."
@@ -74,15 +75,18 @@ class KaggleChestXRayDataset(Dataset):
             return self.__getitem__((index + 1) % len(self))
 
         # Apply transformations if they are provided
-        if self.transform:
-            image = self.transform(image)
+        if image_tensor.shape[0] == 1:
+            image_tensor = image_tensor.expand(3, -1, -1)
 
-        # --- Final Validation ---
+        tv_image = TVTensor(image_tensor)
+        if self.transform:
+            tv_image = self.transform(tv_image)
+
         # Ensure the caption is a string, handle potential NaN values from pandas
         if not isinstance(caption, str):
             caption = str(caption)
 
-        return image, caption
+        return tv_image, caption
 
 
 class KaggleChestXRayCollator:
