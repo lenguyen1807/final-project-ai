@@ -11,8 +11,7 @@ pip install bllipparser nltk peft pyyaml bitsandbytes accelerate evaluate salesf
 
 # Install NegBio from GitHub
 git clone https://github.com/ncbi-nlp/NegBio.git
-python NegBio/setup.py install --user
-export PATH=~/.local/bin:$PATH
+export PYTHONPATH=NegBio:$PYTHONPATH
 
 # -----------------------------
 # Download NLTK data
