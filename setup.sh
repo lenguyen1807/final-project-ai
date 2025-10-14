@@ -10,7 +10,9 @@ pip install --upgrade pip
 pip install bllipparser nltk peft pyyaml bitsandbytes accelerate evaluate salesforce-lavis sentencepiece
 
 # Install NegBio from GitHub
-pip install git+https://github.com/ncbi-nlp/NegBio.git
+git clone https://github.com/ncbi-nlp/NegBio.git
+python NegBio/setup.py install --user
+export PATH=~/.local/bin:$PATH
 
 # -----------------------------
 # Download NLTK data
