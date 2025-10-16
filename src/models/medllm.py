@@ -65,7 +65,7 @@ class MedBLIPModel_biomedlm(Blip2Base):
 
         self.tokenizer = GPT2Tokenizer.from_pretrained(lm_model, pad_token="<PAD>")
         self.lm_model = GPT2LMHeadModel.from_pretrained(
-            lm_model, torch_dtype=torch.float16
+            lm_model, torch_dtype=torch.bfloat16
         )
 
         for name, param in self.lm_model.named_parameters():

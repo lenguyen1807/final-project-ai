@@ -5,9 +5,8 @@ import random
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from torchvision.transforms import v2
 
-from src.dataset import KaggleChestXRayDataset
+from src.dataset import KaggleChestXRayCollator, KaggleChestXRayDataset
 from src.models.medblip_t5 import MedBLIPModel_t5
 from src.models.medllm import MedBLIPModel_biomedlm
 from src.models.vit_gpt2 import ViT_GPT2
@@ -32,39 +31,11 @@ def main(args):
     VAL_CSV_PATH = "/kaggle/input/chest-imagecaptioning/val_df.csv"
     IMG_SIZE = 224
 
-    data_transforms = v2.Compose(
-        [
-            v2.Resize((IMG_SIZE, IMG_SIZE), antialias=True),
-            v2.ToDtype(torch.float32, scale=True),
-            # Normalize with ImageNet stats, a common practice for pre-trained models.
-            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
-
     print("INFO: Setting up data loaders for Kaggle Chest X-ray dataset...")
 
-    train_dataset = KaggleChestXRayDataset(
-        csv_path=TRAIN_CSV_PATH, transform=data_transforms
-    )
-    trainloader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        pin_memory=True,
-        num_workers=4,
-        drop_last=True,
-    )
+    train_dataset = KaggleChestXRayDataset(csv_path=TRAIN_CSV_PATH, transform=None)
 
-    val_dataset = KaggleChestXRayDataset(
-        csv_path=VAL_CSV_PATH, transform=data_transforms
-    )
-    valloader = DataLoader(
-        val_dataset,
-        batch_size=args.eval_batch_size,
-        shuffle=False,
-        pin_memory=True,
-        num_workers=4,
-    )
+    val_dataset = KaggleChestXRayDataset(csv_path=VAL_CSV_PATH, transform=None)
 
     # --- Model Selection ---
     if args.model_type == "t5":
@@ -103,6 +74,31 @@ def main(args):
         )
         model = get_peft_model(model, lora_config)
         model.print_trainable_parameters()
+
+    # --- Collator Setup ---
+    tokenizer = model.t5_tokenizer if args.model_type == "t5" else model.tokenizer
+    collator = KaggleChestXRayCollator(
+        tokenizer=tokenizer, image_size=IMG_SIZE, max_txt_len=model.max_txt_len
+    )
+
+    trainloader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=4,
+        drop_last=True,
+        collate_fn=collator,
+    )
+
+    valloader = DataLoader(
+        val_dataset,
+        batch_size=args.eval_batch_size,
+        shuffle=False,
+        pin_memory=True,
+        num_workers=4,
+        collate_fn=collator,
+    )
 
     model.cuda()
     model_save_path = f"./checkpoints/{args.run_name}"

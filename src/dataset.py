@@ -1,10 +1,10 @@
-# medblip/kaggle_dataset.py
-
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
+import torch
 from torch.utils.data import Dataset
 from torchvision.io import ImageReadMode, decode_image
+from torchvision.transforms import v2
 from torchvision.tv_tensors import TVTensor
 
 
@@ -86,3 +86,53 @@ class KaggleChestXRayDataset(Dataset):
             caption = str(caption)
 
         return tv_image, caption
+
+
+class KaggleChestXRayCollator:
+    """
+    A collator that handles both image resizing and report tokenization.
+    """
+
+    def __init__(self, tokenizer: Callable, image_size: int, max_txt_len: int = 100):
+        self.tokenizer = tokenizer
+        self.max_txt_len = max_txt_len
+        # Create a transform to resize images to a consistent size and normalize them.
+        self.image_transform = v2.Compose(
+            [
+                v2.Resize((image_size, image_size), antialias=True),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+
+    def __call__(self, batch: List[tuple]) -> Dict[str, Any]:
+        if not batch:
+            return {}
+
+        # Filter out any None samples that might have resulted from loading errors
+        batch = [sample for sample in batch if sample is not None]
+        if not batch:
+            return {}
+
+        images, captions = zip(*batch)
+
+        # --- Image Processing ---
+        # Apply the transform to each image in the batch.
+        processed_images = [self.image_transform(img) for img in images]
+        batched_images = torch.stack(processed_images, dim=0)
+
+        # --- Text Processing ---
+        # Tokenize the captions.
+        text_tokens = self.tokenizer(
+            list(captions),
+            padding="longest",
+            truncation=True,
+            max_length=self.max_txt_len,
+            return_tensors="pt",
+        )
+
+        return {
+            "images": batched_images,
+            "reports": list(captions),
+            "text_tokens": text_tokens,
+        }
