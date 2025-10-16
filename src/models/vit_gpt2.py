@@ -34,11 +34,11 @@ class ViT_GPT2(nn.Module):
         print(f"INFO: Loading vision encoder: {vit_model}")
         self.visual_encoder, self.ln_vision = self.init_vision_encoder(
             vit_model,
-            img_size,
-            patch_size,
-            drop_path_rate,
-            use_grad_checkpoint,
-            vit_precision,
+            img_size=(1, img_size, img_size),
+            patch_size=(1, patch_size, patch_size),
+            drop_path_rate=drop_path_rate,
+            use_grad_checkpoint=use_grad_checkpoint,
+            vit_precision=vit_precision,
         )
         if freeze_vit:
             for param in self.visual_encoder.parameters():
@@ -96,6 +96,10 @@ class ViT_GPT2(nn.Module):
         """
         images = samples["images"].cuda()
         reports = samples["reports"]
+
+        # Add a depth dimension for the 3D ViT
+        if images.ndim == 4:
+            images = images.unsqueeze(2)
 
         # 1. Get visual embeddings
         with torch.no_grad():

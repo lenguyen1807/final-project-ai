@@ -49,11 +49,9 @@ class XRayDataset(Dataset):
             image_tensor = image_tensor.expand(3, -1, -1)
 
         tv_image = Image(image_tensor)
-        print("Original: ", tv_image.shape)
 
         if self.transform:
             tv_image = self.transform(tv_image)
-            print("Transform: ", tv_image.shape)
 
         if not isinstance(caption, str):
             caption = str(caption)
