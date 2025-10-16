@@ -36,6 +36,7 @@ class Trainer:
         max_grad_norm: float = 1.0,
         use_amp: bool = False,
         accumulation_steps: int = 1,
+        compute_clinical: bool = False,
     ):
         """
         Main training loop.
@@ -137,7 +138,7 @@ class Trainer:
 
             # --- Evaluation Step ---
             print(f"--- Running Evaluation for Epoch {epoch + 1} ---")
-            metrics = self._run_evaluation(model, eval_dataloader)
+            metrics = self.evaluate(model, eval_dataloader, compute_clinical)
 
             # Save metrics to a file
             metrics_path = os.path.join(output_path, f"epoch_{epoch + 1}_metrics.json")
@@ -148,8 +149,11 @@ class Trainer:
             # --- Save Checkpoint ---
             self._save_ckpt(model, epoch + 1, output_path)
 
-    def _run_evaluation(
-        self, model: torch.nn.Module, eval_dataloader: DataLoader
+    def evaluate(
+        self,
+        model: torch.nn.Module,
+        eval_dataloader: DataLoader,
+        compute_clinical: bool = False,
     ) -> Dict[str, float]:
         """
         Runs the full evaluation loop and computes all metrics.
@@ -222,7 +226,7 @@ class Trainer:
                     print("  --------------------")
 
         print("--- Computing All Metrics ---")
-        metrics = compute_all_metrics(all_predictions, all_references)
+        metrics = compute_all_metrics(all_predictions, all_references, compute_clinical)
         print("\n--- Evaluation Results ---")
         for key, value in metrics.items():
             print(f"  {key}: {value:.4f}")
@@ -237,7 +241,6 @@ class Trainer:
             return transformers.get_cosine_schedule_with_warmup(
                 optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
             )
-        # Add other schedulers from original code if needed
         else:
             raise ValueError(f"Unknown scheduler {scheduler}")
 

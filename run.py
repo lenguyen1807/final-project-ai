@@ -1,5 +1,3 @@
-# run_medblip_pretrain.py
-
 import argparse
 import os
 import random
@@ -9,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 
-from src.dataset import KaggleChestXRayCollator, KaggleChestXRayDataset
+from src.dataset import KaggleChestXRayDataset
 from src.models.medblip_t5 import MedBLIPModel_t5
 from src.models.medllm import MedBLIPModel_biomedlm
 from src.models.vit_gpt2 import ViT_GPT2
@@ -28,8 +26,6 @@ def set_seed(seed):
 
 def main(args):
     set_seed(args.seed)
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 
     # --- Data Loading ---
     TRAIN_CSV_PATH = "/kaggle/input/chest-imagecaptioning/train_df.csv"
@@ -50,11 +46,9 @@ def main(args):
     train_dataset = KaggleChestXRayDataset(
         csv_path=TRAIN_CSV_PATH, transform=data_transforms
     )
-    train_collator = KaggleChestXRayCollator()
     trainloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        collate_fn=train_collator,
         shuffle=True,
         pin_memory=True,
         num_workers=4,
@@ -64,11 +58,9 @@ def main(args):
     val_dataset = KaggleChestXRayDataset(
         csv_path=VAL_CSV_PATH, transform=data_transforms
     )
-    val_collator = KaggleChestXRayCollator()
     valloader = DataLoader(
         val_dataset,
         batch_size=args.eval_batch_size,
-        collate_fn=val_collator,
         shuffle=False,
         pin_memory=True,
         num_workers=4,

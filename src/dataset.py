@@ -1,9 +1,8 @@
 # medblip/kaggle_dataset.py
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Optional
 
 import pandas as pd
-import torch
 from torch.utils.data import Dataset
 from torchvision.io import ImageReadMode, decode_image
 from torchvision.tv_tensors import TVTensor
@@ -87,43 +86,3 @@ class KaggleChestXRayDataset(Dataset):
             caption = str(caption)
 
         return tv_image, caption
-
-
-class KaggleChestXRayCollator:
-    """
-    A collator function to batch data from KaggleChestXRayDataset.
-    """
-
-    def __init__(self):
-        pass
-
-    def __call__(self, batch: List[tuple]) -> Dict[str, Any]:
-        """
-        Processes a list of samples and collates them into a batch.
-
-        Args:
-            batch (list): A list of tuples, where each tuple is (image_tensor, caption_string).
-
-        Returns:
-            A dictionary formatted for the model's forward pass:
-            {'images': torch.Tensor, 'reports': List[str]}
-        """
-        # --- Input Validation ---
-        if not batch:
-            return {}
-
-        # Filter out any None samples that might have resulted from loading errors
-        batch = [sample for sample in batch if sample is not None]
-        if not batch:
-            return {}
-
-        images, captions = zip(*batch)
-
-        # --- Batching ---
-        # Stack images into a single tensor.
-        # torch.stack creates a new dimension for the batch.
-        batched_images = torch.stack(images, dim=0)
-
-        # Return a dictionary with keys matching the model's expected input arguments.
-        # The key 'reports' is used to maintain compatibility with the existing models.
-        return {"images": batched_images, "reports": list(captions)}
