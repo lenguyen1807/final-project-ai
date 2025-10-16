@@ -90,13 +90,12 @@ class ViT_GPT2(nn.Module):
             samples (dict): A dictionary containing:
                 - 'images' (torch.Tensor): Input images of shape (B, C, H, W).
                 - 'reports' (List[str]): A list of ground truth text reports.
-                - 'text_tokens' (transformers.BatchEncoding): Pre-tokenized reports.
 
         Returns:
             A dictionary containing the 'loss'.
         """
         images = samples["images"].cuda()
-        text_tokens = samples["text_tokens"]
+        reports = samples["reports"]
 
         # 1. Get visual embeddings
         with torch.no_grad():
@@ -108,8 +107,15 @@ class ViT_GPT2(nn.Module):
         # 2. Project visual embeddings to LM embedding space
         image_embeds_proj = self.vision_proj(image_embeds)  # (B, N_patches + 1, D_lm)
 
-        # 3. Tokenized text is now passed in directly
-        text_tokens = text_tokens.to(images.device)
+        # 3. Tokenize text reports
+        self.tokenizer.padding_side = "right"
+        text_tokens = self.tokenizer(
+            reports,
+            padding="longest",
+            truncation=True,
+            max_length=self.max_txt_len,
+            return_tensors="pt",
+        ).to(images.device)
 
         # 4. Prepare combined inputs for LM
         input_embeds = self.lm_model.transformer.wte(

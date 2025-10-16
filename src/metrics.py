@@ -204,7 +204,7 @@ def compute_linguistic_fluency(predictions, references):
     }
 
 
-def compute_all_metrics(predictions, references, compute_clinical: bool = False):
+def compute_all_metrics(predictions, references):
     # Filter out empty strings which can cause errors in downstream metrics
     filtered_pairs = [
         (p, r)
@@ -226,9 +226,8 @@ def compute_all_metrics(predictions, references, compute_clinical: bool = False)
     fluency_metrics = compute_linguistic_fluency(
         filtered_predictions, filtered_references
     )
-    if compute_clinical:
-        factuality_metrics = compute_clinical_factuality(
-            filtered_predictions, filtered_references
-        )
-        return {**fluency_metrics, **factuality_metrics}
-    return {**fluency_metrics}
+    factuality_metrics = compute_clinical_factuality(
+        filtered_predictions, filtered_references
+    )
+
+    return {**fluency_metrics, **factuality_metrics}
