@@ -24,16 +24,15 @@ def set_seed(seed):
     os.environ["PYTHONHASHSEED"] = str(seed)
 
 
+TRAIN_CSV_PATH = "/kaggle/input/chest-imagecaptioning/train_df.csv"
+VAL_CSV_PATH = "/kaggle/input/chest-imagecaptioning/val_df.csv"
+IMG_SIZE = 224
+
+
 def main(args):
     set_seed(args.seed)
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 
     # --- Data Loading ---
-    TRAIN_CSV_PATH = "/kaggle/input/chest-imagecaptioning/train_df.csv"
-    VAL_CSV_PATH = "/kaggle/input/chest-imagecaptioning/val_df.csv"
-    IMG_SIZE = 224
-
     data_transforms = v2.Compose(
         [
             v2.Resize((IMG_SIZE, IMG_SIZE), antialias=True),

@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from torchvision.io import ImageReadMode, decode_image
-from torchvision.tv_tensors import TVTensor
+from torchvision.tv_tensors import Image
 
 
 class XRayDataset(Dataset):
@@ -48,12 +48,12 @@ class XRayDataset(Dataset):
         if image_tensor.shape[0] == 1:
             image_tensor = image_tensor.expand(3, -1, -1)
 
-        tv_image = TVTensor(image_tensor)
-        print(tv_image.shape)
+        tv_image = Image(image_tensor)
+        print("Original: ", tv_image.shape)
 
         if self.transform:
             tv_image = self.transform(tv_image)
-        print(tv_image.shape)
+            print("Transform: ", tv_image.shape)
 
         if not isinstance(caption, str):
             caption = str(caption)
