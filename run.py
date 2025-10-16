@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 
-from src.dataset import DatasetCollator, KaggleChestXRayDataset
+from src.dataset import DatasetCollator, XRayDataset
 from src.models.medblip_t5 import MedBLIPModel_t5
 from src.models.medllm import MedBLIPModel_biomedlm
 from src.models.vit_gpt2 import ViT_GPT2
@@ -45,9 +45,7 @@ def main(args):
 
     print("INFO: Setting up data loaders for Kaggle Chest X-ray dataset...")
 
-    train_dataset = KaggleChestXRayDataset(
-        csv_path=TRAIN_CSV_PATH, transform=data_transforms
-    )
+    train_dataset = XRayDataset(csv_path=TRAIN_CSV_PATH, transform=data_transforms)
     train_collator = DatasetCollator()
     trainloader = DataLoader(
         train_dataset,
@@ -59,9 +57,7 @@ def main(args):
         drop_last=True,
     )
 
-    val_dataset = KaggleChestXRayDataset(
-        csv_path=VAL_CSV_PATH, transform=data_transforms
-    )
+    val_dataset = XRayDataset(csv_path=VAL_CSV_PATH, transform=data_transforms)
     val_collator = DatasetCollator()
     valloader = DataLoader(
         val_dataset,
