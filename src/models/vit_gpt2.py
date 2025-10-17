@@ -170,6 +170,10 @@ class ViT_GPT2(nn.Module):
         """
         images = samples["images"].cuda()
 
+        # Add a depth dimension for the 3D ViT
+        if images.ndim == 4:
+            images = images.unsqueeze(2)
+
         with self.maybe_autocast():
             image_embeds = self.ln_vision(self.visual_encoder(images))
 

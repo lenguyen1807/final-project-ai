@@ -137,7 +137,7 @@ class Trainer:
 
             # --- Evaluation Step ---
             print(f"--- Running Evaluation for Epoch {epoch + 1} ---")
-            metrics = self._run_evaluation(model, eval_dataloader)
+            metrics = self.evaluate(model, eval_dataloader)
 
             # Save metrics to a file
             metrics_path = os.path.join(output_path, f"epoch_{epoch + 1}_metrics.json")
@@ -148,7 +148,7 @@ class Trainer:
             # --- Save Checkpoint ---
             self._save_ckpt(model, epoch + 1, output_path)
 
-    def _run_evaluation(
+    def evaluate(
         self, model: torch.nn.Module, eval_dataloader: DataLoader
     ) -> Dict[str, float]:
         """
