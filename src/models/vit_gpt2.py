@@ -182,13 +182,31 @@ class ViT_GPT2(nn.Module):
             image_embeds_proj.size()[:-1], dtype=torch.long, device=images.device
         )
 
+        # To avoid the ValueError with `inputs_embeds` in `generate` for decoder-only models,
+        # we can pre-compute the `past_key_values` from the image embeddings and pass them
+        # to the `generate` function. This is a more robust way to handle prompt embeddings.
+        image_outputs = self.lm_model(
+            inputs_embeds=image_embeds_proj,
+            attention_mask=img_attns,
+            return_dict=True,
+        )
+        past_key_values = image_outputs.past_key_values
+
+        # Prepare input_ids to start generation (BOS token)
+        batch_size = images.shape[0]
+        start_token_id = self.lm_model.config.bos_token_id
+        input_ids = torch.full(
+            (batch_size, 1), start_token_id, dtype=torch.long, device=images.device
+        )
+
         # Default generation parameters if not provided
         kwargs.setdefault("max_new_tokens", self.max_txt_len)
         kwargs.setdefault("num_beams", 5)
         kwargs.setdefault("do_sample", False)
 
         outputs = self.lm_model.generate(
-            inputs_embeds=image_embeds_proj,
+            input_ids=input_ids,
+            past_key_values=past_key_values,
             attention_mask=img_attns,
             pad_token_id=self.tokenizer.pad_token_id,
             **kwargs,

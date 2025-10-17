@@ -7,7 +7,7 @@ set -x
 # -----------------------------
 sudo apt-get install swig -y
 pip install --upgrade pip
-pip install bllipparser timm nltk peft pyyaml bitsandbytes accelerate evaluate salesforce-lavis sentencepiece
+pip install bllipparser timm nltk peft==0.10.0 pyyaml bitsandbytes accelerate evaluate salesforce-lavis sentencepiece
 
 # Install NegBio from GitHub
 git clone https://github.com/ncbi-nlp/NegBio.git

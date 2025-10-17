@@ -98,7 +98,7 @@ class Trainer:
             )
             for train_iter, data in progress_bar:
                 if use_amp and torch.cuda.is_available():
-                    with autocast():
+                    with torch.amp.autocast("cuda"):
                         loss_dict = model(data)
                         loss = loss_dict["loss"] / self.accumulation_steps
                     scaler.scale(loss).backward()
