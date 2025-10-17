@@ -38,7 +38,7 @@ class ViT_GPT2(nn.Module):
             patch_size=(1, patch_size, patch_size),
             drop_path_rate=drop_path_rate,
             use_grad_checkpoint=use_grad_checkpoint,
-            vit_precision=vit_precision,
+            precision=vit_precision,
         )
         if freeze_vit:
             for param in self.visual_encoder.parameters():
