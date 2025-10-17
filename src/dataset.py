@@ -71,6 +71,5 @@ class DatasetCollator:
             return {}
 
         images, captions = zip(*batch)
-        print([img.shape for img in images])
         batched_images = torch.stack(images, dim=0)
         return {"images": batched_images, "reports": list(captions)}
