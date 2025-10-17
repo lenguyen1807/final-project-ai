@@ -559,10 +559,12 @@ def create_eva_vit_g(
     drop_path_rate=0.4,
     use_checkpoint=False,
     precision="fp16",
+    in_chans=3,
 ):
     model = VisionTransformer(
         img_size=img_size,
         patch_size=patch_size,
+        in_chans=in_chans,
         use_mean_pooling=False,
         embed_dim=1408,
         depth=39,
