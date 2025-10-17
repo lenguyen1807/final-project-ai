@@ -204,10 +204,12 @@ class ViT_GPT2(nn.Module):
         kwargs.setdefault("num_beams", 5)
         kwargs.setdefault("do_sample", False)
 
+        attention_mask = torch.cat([img_attns, torch.ones_like(input_ids)], dim=1)
+
         outputs = self.lm_model.generate(
             input_ids=input_ids,
             past_key_values=past_key_values,
-            attention_mask=img_attns,
+            attention_mask=attention_mask,
             pad_token_id=self.tokenizer.pad_token_id,
             **kwargs,
         )
