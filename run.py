@@ -122,6 +122,7 @@ def main(args):
         output_path=model_save_path,
         weight_decay=args.weight_decay,
         use_amp=True,
+        compute_clinical=args.compute_clinical
     )
 
 
@@ -144,6 +145,11 @@ if __name__ == "__main__":
         "--use_lora",
         action="store_true",
         help="Enable LoRA for parameter-efficient training.",
+    )
+    parser.add_argument(
+        "--compute_clinical",
+        action="store_true",
+        help="Compute clinical metrics (CheXpert label)",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument("--gpu_id", type=str, default="0", help="GPU ID to use.")

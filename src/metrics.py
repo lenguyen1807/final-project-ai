@@ -12,8 +12,8 @@ from sklearn.metrics import classification_report, precision_recall_fscore_suppo
 # Define paths for the tools we need to clone and set up
 KAGGLE_WORKING_DIR = os.environ.get("KAGGLE_DIR", "/kaggle/working")
 METRICS_CACHE_DIR = os.path.join(KAGGLE_WORKING_DIR, "./metrics_cache")
-CHEXPERT_DIR = os.path.join(KAGGLE_WORKING_DIR, "chexpert-labeler")
-NEGBIO_DIR = os.path.join(KAGGLE_WORKING_DIR, "NegBio")
+CHEXPERT_DIR = os.path.join(KAGGLE_WORKING_DIR, "final-project-ai/chexpert-labeler")
+NEGBIO_DIR = os.path.join(KAGGLE_WORKING_DIR, "final-project-ai/NegBio")
 CHEXPERT_LABELER_SCRIPT = os.path.join(CHEXPERT_DIR, "label.py")
 
 # Set environment variables for Hugging Face cache
@@ -38,9 +38,6 @@ def run_chexpert_on_reports(reports_list, input_path, output_path):
     if not os.path.exists(CHEXPERT_LABELER_SCRIPT):
         print(
             f"❌ ERROR: CheXpert labeler script not found at '{CHEXPERT_LABELER_SCRIPT}'."
-        )
-        print(
-            "Please run the setup function: `from medblip.metrics import setup_metrics_env; setup_metrics_env()`"
         )
         return None
 
@@ -204,7 +201,7 @@ def compute_linguistic_fluency(predictions, references):
     }
 
 
-def compute_all_metrics(predictions, references):
+def compute_all_metrics(predictions, references, compute_clinical: bool = False):
     # Filter out empty strings which can cause errors in downstream metrics
     filtered_pairs = [
         (p, r)
@@ -226,8 +223,11 @@ def compute_all_metrics(predictions, references):
     fluency_metrics = compute_linguistic_fluency(
         filtered_predictions, filtered_references
     )
-    factuality_metrics = compute_clinical_factuality(
-        filtered_predictions, filtered_references
-    )
-
-    return {**fluency_metrics, **factuality_metrics}
+    
+    if compute_clinical:
+        factuality_metrics = compute_clinical_factuality(
+            filtered_predictions, filtered_references
+        )
+        return {**fluency_metrics, **factuality_metrics}
+    else:
+        return {**fluency_metrics}
