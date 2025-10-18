@@ -138,11 +138,20 @@ class Trainer:
             print(f"--- Running Evaluation for Epoch {epoch + 1} ---")
             metrics = self.evaluate(model, eval_dataloader, compute_clinical)
 
-            # Save metrics to a file
-            metrics_path = os.path.join(output_path, f"epoch_{epoch + 1}_metrics.json")
-            with open(metrics_path, "w") as f:
-                json.dump(metrics, f, indent=4)
-            print(f"Evaluation metrics saved to {metrics_path}")
+            try:
+                # Ensure output directory exists
+                os.makedirs(output_path, exist_ok=True)
+
+                # Save metrics to a file
+                metrics_path = os.path.join(
+                    output_path, f"epoch_{epoch + 1}_metrics.json"
+                )
+
+                with open(metrics_path, "w") as f:
+                    json.dump(metrics, f, indent=4)
+                print(f"Evaluation metrics saved to {metrics_path}")
+            except Exception as e:
+                print(f"Cannot save metrics to {metrics_path} because of {e}")
 
             # --- Save Checkpoint ---
             self._save_ckpt(model, epoch + 1, output_path)
