@@ -24,6 +24,7 @@ def set_seed(seed):
     os.environ["PYTHONHASHSEED"] = str(seed)
 
 
+KAGGLE_WORKING_DIR = os.environ.get("KAGGLE_DIR", "/kaggle/working")
 TRAIN_CSV_PATH = "/kaggle/input/chest-imagecaptioning/train_df.csv"
 VAL_CSV_PATH = "/kaggle/input/chest-imagecaptioning/val_df.csv"
 IMG_SIZE = 224
@@ -108,7 +109,7 @@ def main(args):
         model.print_trainable_parameters()
 
     model.cuda()
-    model_save_path = f"./checkpoints/{args.run_name}"
+    model_save_path = f"{KAGGLE_WORKING_DIR}/checkpoints/{args.run_name}"
 
     # --- Training ---
     trainer = Trainer()
@@ -122,7 +123,7 @@ def main(args):
         output_path=model_save_path,
         weight_decay=args.weight_decay,
         use_amp=True,
-        compute_clinical=args.compute_clinical
+        compute_clinical=args.compute_clinical,
     )
 
 

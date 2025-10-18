@@ -43,8 +43,6 @@ class Trainer:
         """
         self.accumulation_steps = accumulation_steps
         if use_amp and torch.cuda.is_available():
-            from torch.cuda.amp import autocast
-
             scaler = torch.amp.GradScaler("cuda")
             print("INFO: Using Automatic Mixed Precision (AMP).")
 
@@ -150,7 +148,10 @@ class Trainer:
             self._save_ckpt(model, epoch + 1, output_path)
 
     def evaluate(
-        self, model: torch.nn.Module, eval_dataloader: DataLoader, compute_clinical: bool = False
+        self,
+        model: torch.nn.Module,
+        eval_dataloader: DataLoader,
+        compute_clinical: bool = False,
     ) -> Dict[str, float]:
         """
         Runs the full evaluation loop and computes all metrics.
@@ -162,7 +163,10 @@ class Trainer:
         # Check model type to determine evaluation strategy
         # This is a bit of a hack, a more robust solution would be a
         # standardized model interface or config.
-        is_captioning_model = isinstance(model, ViT_GPT2) or "vit_gpt2" in model.__class__.__name__.lower()
+        is_captioning_model = (
+            isinstance(model, ViT_GPT2)
+            or "vit_gpt2" in model.__class__.__name__.lower()
+        )
 
         def parse_qa_report_for_eval(doc: str):
             if "The diagnosis is" in doc:
