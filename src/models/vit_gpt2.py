@@ -1,218 +1,120 @@
-from typing import Any, Dict, List
-
 import torch
 import torch.nn as nn
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import (
+    VisionEncoderDecoderModel,
+    ViTImageProcessor,
+    AutoTokenizer,
+)
 
-from src.models.eva_vit import create_eva_vit_g
-from src.models.medllm import LayerNorm
+# PEFT might not be installed, so handle import error
+try:
+    from peft import get_peft_model, LoraConfig
+
+    PEFT_AVAILABLE = True
+except ImportError:
+    PEFT_AVAILABLE = False
 
 
 class ViT_GPT2(nn.Module):
     """
-    A simple Vision Transformer + GPT-2 model for image captioning.
-    - Vision Encoder: EVA-ViT-g
-    - Language Model: GPT-2
-    - Connector: A linear projection layer
+    HuggingFace-based Vision Transformer + GPT-2 model for image captioning.
+    - Uses `nlpconnect/vit-gpt2-image-captioning`
+    - Supports LoRA fine-tuning.
     """
 
     def __init__(
         self,
-        vit_model: str = "eva_clip_g",
-        img_size: int = 224,
-        patch_size: int = 32,
-        drop_path_rate: float = 0.0,
-        use_grad_checkpoint: bool = False,
-        vit_precision: str = "fp16",
-        freeze_vit: bool = True,
-        gpt2_model: str = "gpt2",
-        max_txt_len: int = 100,
+        use_lora=False,
+        lora_rank=8,
+        lora_alpha=16,
+        lora_dropout=0.1,
+        **kwargs,  # to accept other params from old signature
     ):
         super().__init__()
+        model_name = "nlpconnect/vit-gpt2-image-captioning"
 
-        # --- Vision Encoder ---
-        print(f"INFO: Loading vision encoder: {vit_model}")
-        self.visual_encoder, self.ln_vision = self.init_vision_encoder(
-            vit_model,
-            img_size=(1, img_size, img_size),
-            patch_size=(1, patch_size, patch_size),
-            drop_path_rate=drop_path_rate,
-            use_grad_checkpoint=use_grad_checkpoint,
-            precision=vit_precision,
-        )
-        if freeze_vit:
-            for param in self.visual_encoder.parameters():
-                param.requires_grad = False
-            self.visual_encoder.eval()
-            print("INFO: Vision encoder is frozen.")
+        print(f"INFO: Loading HuggingFace model: {model_name}")
+        self.model = VisionEncoderDecoderModel.from_pretrained(model_name)
+        self.feature_extractor = ViTImageProcessor.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        # --- Language Model ---
-        print(f"INFO: Loading language model: {gpt2_model}")
-        self.tokenizer = GPT2Tokenizer.from_pretrained(gpt2_model)
+        # Set pad token for tokenizer and model config
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.lm_model = GPT2LMHeadModel.from_pretrained(gpt2_model)
+        self.model.config.decoder.pad_token_id = self.tokenizer.pad_token_id
+        self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
-        # --- Connector ---
-        vit_embed_dim = self.visual_encoder.num_features
-        lm_embed_dim = self.lm_model.config.n_embd
-        self.vision_proj = nn.Linear(vit_embed_dim, lm_embed_dim)
+        self.use_lora = use_lora
+        if self.use_lora:
+            if not PEFT_AVAILABLE:
+                raise ImportError(
+                    "PEFT library is not available. Please install it via `pip install peft` to use LoRA."
+                )
+            print("INFO: Applying LoRA configuration...")
+            # Modules to apply LoRA to. These are common for ViT and GPT2.
+            target_modules = [
+                "encoder.layer.*.attention.attention.query",
+                "encoder.layer.*.attention.attention.value",
+                "decoder.block.*.attn.c_attn",
+            ]
+            peft_config = LoraConfig(
+                r=lora_rank,
+                lora_alpha=lora_alpha,
+                lora_dropout=lora_dropout,
+                target_modules=target_modules,
+                bias="none",
+            )
+            self.model = get_peft_model(self.model, peft_config)
+            self.model.print_trainable_parameters()
 
-        self.max_txt_len = max_txt_len
-
-    def init_vision_encoder(
-        self,
-        model_name,
-        img_size,
-        patch_size,
-        drop_path_rate,
-        use_grad_checkpoint,
-        precision,
-    ):
-        visual_encoder = create_eva_vit_g(
-            img_size, patch_size, drop_path_rate, use_grad_checkpoint, precision
-        )
-        ln_vision = LayerNorm(visual_encoder.num_features)
-        return visual_encoder, ln_vision
-
-    def maybe_autocast(self, dtype=torch.float16):
-        # if on cpu, don't use autocast
-        # if on gpu, use autocast with passed dtype
-        if torch.cuda.is_available():
-            return torch.amp.autocast("cuda", dtype=dtype)
-        else:
-            return nn.Identity()
-
-    def forward(self, samples: Dict[str, Any]) -> Dict[str, torch.Tensor]:
-        """
-        Forward pass for training.
-
-        Args:
-            samples (dict): A dictionary containing:
-                - 'images' (torch.Tensor): Input images of shape (B, C, H, W).
-                - 'reports' (List[str]): A list of ground truth text reports.
-
-        Returns:
-            A dictionary containing the 'loss'.
-        """
-        images = samples["images"].cuda()
+    def forward(self, samples):
+        images = samples["images"]
         reports = samples["reports"]
 
-        # Add a depth dimension for the 3D ViT
-        if images.ndim == 4:
-            images = images.unsqueeze(2)
+        # The feature_extractor expects a list of images.
+        # The input `images` is a batch tensor (B, C, H, W).
+        # We convert it to a list of tensors, which the processor handles.
+        image_list = [img for img in images]
+        pixel_values = self.feature_extractor(
+            images=image_list, return_tensors="pt"
+        ).pixel_values.to(self.model.device)
 
-        # 1. Get visual embeddings
-        with torch.no_grad():
-            with self.maybe_autocast():
-                image_embeds = self.ln_vision(
-                    self.visual_encoder(images)
-                )  # (B, N_patches + 1, D_vit)
+        # Tokenize reports for labels
+        labels = self.tokenizer(
+            reports, padding="longest", return_tensors="pt"
+        ).input_ids.to(self.model.device)
 
-        # 2. Project visual embeddings to LM embedding space
-        image_embeds_proj = self.vision_proj(image_embeds)  # (B, N_patches + 1, D_lm)
+        # For training, labels should be -100 for padding tokens
+        labels[labels == self.tokenizer.pad_token_id] = -100
 
-        # 3. Tokenize text reports
-        self.tokenizer.padding_side = "right"
-        text_tokens = self.tokenizer(
-            reports,
-            padding="longest",
-            truncation=True,
-            max_length=self.max_txt_len,
-            return_tensors="pt",
-        ).to(images.device)
-
-        # 4. Prepare combined inputs for LM
-        input_embeds = self.lm_model.transformer.wte(
-            text_tokens.input_ids
-        )  # (B, L, D_lm)
-
-        # Concatenate image and text embeddings: [IMG, TEXT]
-        combined_embeds = torch.cat([image_embeds_proj, input_embeds], dim=1)
-
-        # Create corresponding attention mask
-        img_attns = torch.ones(
-            image_embeds_proj.size()[:-1], dtype=torch.long, device=images.device
+        outputs = self.model(
+            pixel_values=pixel_values, labels=labels, return_dict=True
         )
-        combined_attns = torch.cat([img_attns, text_tokens.attention_mask], dim=1)
-
-        # 5. Prepare labels for LM, ignoring the image part
-        img_labels = torch.full(
-            image_embeds_proj.size()[:-1], -100, dtype=torch.long, device=images.device
-        )
-        text_labels = text_tokens.input_ids.masked_fill(
-            text_tokens.attention_mask == 0, -100
-        )
-        combined_labels = torch.cat([img_labels, text_labels], dim=1)
-
-        # 6. Pass to LM and compute loss
-        outputs = self.lm_model(
-            inputs_embeds=combined_embeds,
-            attention_mask=combined_attns,
-            labels=combined_labels,
-            return_dict=True,
-        )
-
-        loss = outputs.loss
-
-        return {"loss": loss}
+        return {"loss": outputs.loss}
 
     @torch.no_grad()
-    def generate(self, samples: Dict[str, Any], **kwargs) -> List[str]:
-        """
-        Generate text captions for images.
+    def generate(self, samples, **kwargs):
+        images = samples["images"]
 
-        Args:
-            samples (dict): A dictionary containing 'images'.
-            **kwargs: Additional arguments for lm_model.generate().
+        # The feature extractor expects a list of images.
+        image_list = [img for img in images]
+        pixel_values = self.feature_extractor(
+            images=image_list, return_tensors="pt"
+        ).pixel_values.to(self.model.device)
 
-        Returns:
-            A list of generated captions.
-        """
-        images = samples["images"].cuda()
-
-        # Add a depth dimension for the 3D ViT
-        if images.ndim == 4:
-            images = images.unsqueeze(2)
-
-        with self.maybe_autocast():
-            image_embeds = self.ln_vision(self.visual_encoder(images))
-
-        image_embeds_proj = self.vision_proj(image_embeds)
-        img_attns = torch.ones(
-            image_embeds_proj.size()[:-1], dtype=torch.long, device=images.device
-        )
-
-        # To avoid the ValueError with `inputs_embeds` in `generate` for decoder-only models,
-        # we can pre-compute the `past_key_values` from the image embeddings and pass them
-        # to the `generate` function. This is a more robust way to handle prompt embeddings.
-        image_outputs = self.lm_model(
-            inputs_embeds=image_embeds_proj,
-            attention_mask=img_attns,
-            return_dict=True,
-        )
-        past_key_values = image_outputs.past_key_values
-
-        # Prepare input_ids to start generation (BOS token)
-        batch_size = images.shape[0]
-        start_token_id = self.lm_model.config.bos_token_id
-        input_ids = torch.full(
-            (batch_size, 1), start_token_id, dtype=torch.long, device=images.device
-        )
-
-        # Default generation parameters if not provided
-        kwargs.setdefault("max_new_tokens", self.max_txt_len)
+        # Set default generation parameters if not provided
+        kwargs.setdefault("max_length", 100)
         kwargs.setdefault("num_beams", 5)
-        kwargs.setdefault("do_sample", False)
 
-        attention_mask = torch.cat([img_attns, torch.ones_like(input_ids)], dim=1)
+        generated_ids = self.model.generate(pixel_values, **kwargs)
 
-        outputs = self.lm_model.generate(
-            input_ids=input_ids,
-            past_key_values=past_key_values,
-            attention_mask=attention_mask,
-            pad_token_id=self.tokenizer.pad_token_id,
-            **kwargs,
+        generated_text = self.tokenizer.batch_decode(
+            generated_ids, skip_special_tokens=True
         )
-
-        generated_text = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
         return [text.strip() for text in generated_text]
+
+    # Add save_pretrained for compatibility with the trainer's checkpointing
+    def save_pretrained(self, path):
+        # If using PEFT, the peft model handles saving correctly.
+        # If not, the underlying transformers model handles it.
+        print(f"INFO: Saving model to {path}")
+        self.model.save_pretrained(path)

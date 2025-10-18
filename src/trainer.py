@@ -158,10 +158,12 @@ class Trainer:
         all_predictions = []
         all_references = []
 
-        # Logic for parsing reports is specific to the dataset and model's forward pass.
-        # This needs to be consistent with how the `forward` pass parses text.
-        # This is a simplified version; you might need to adapt it if your eval data format differs.
-        def parse_report_for_eval(doc: str):
+        # Check model type to determine evaluation strategy
+        # This is a bit of a hack, a more robust solution would be a
+        # standardized model interface or config.
+        is_captioning_model = isinstance(model, ViT_GPT2) or "vit_gpt2" in model.__class__.__name__.lower()
+
+        def parse_qa_report_for_eval(doc: str):
             if "The diagnosis is" in doc:
                 text = doc.split("The diagnosis is ")[0]
                 label = doc.split("The diagnosis is ")[1].split(".")[0]
@@ -177,34 +179,32 @@ class Trainer:
                 for k, v in label_replacements.items():
                     label = label.replace(k, v)
 
-                # The 'prompt' should match what the model expects for generation
-                # For QA models, this includes the question. For captioning, it might be empty.
                 prompt = (
                     text
                     + "Question: What will this subject be diagnosed with? Answer: "
                 )
                 return prompt, label
             else:
-                return doc, ""
+                # Fallback for non-QA format
+                return doc, doc
 
         progress_bar = tqdm(eval_dataloader, desc="Evaluation")
         for eval_data in progress_bar:
             images = eval_data["images"].cuda().half()
+            reports = eval_data["reports"]
 
-            prompts = []
-            references = []
-            for report in eval_data["reports"]:
-                prompt, reference = parse_report_for_eval(report)
-                prompts.append(prompt)
-                references.append(reference)
-
-            # The generate function signature might vary. Using a flexible dict.
-            # The new ViT-GPT2 model does not need a 'prompt'.
-            # The existing models do. A check on model type is needed for compatibility.
             generate_input = {"images": images}
-            if not isinstance(
-                model, ViT_GPT2
-            ):  # A bit of a hack, better to standardize generate interface
+            if is_captioning_model:
+                # For captioning, references are the full reports.
+                references = reports
+            else:
+                # For QA models, parse prompts and references.
+                prompts = []
+                references = []
+                for report in reports:
+                    prompt, reference = parse_qa_report_for_eval(report)
+                    prompts.append(prompt)
+                    references.append(reference)
                 generate_input["prompt"] = prompts
 
             with torch.no_grad():
