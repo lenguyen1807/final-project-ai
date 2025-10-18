@@ -30,6 +30,9 @@ IMG_SIZE = 224
 
 
 def main(args):
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
     set_seed(args.seed)
 
     # --- Data Loading ---
