@@ -26,20 +26,17 @@ class Trainer:
         model: torch.nn.Module,
         train_dataloader: DataLoader,
         eval_dataloader: DataLoader,
-        epochs: int = 1,
-        scheduler: str = "WarmupCosine",
-        warmup_ratio: float = 0.01,
-        output_path: str = "./checkpoints/pretrain",
-        optimizer_class: Type[Optimizer] = torch.optim.AdamW,
-        optimizer_params: Dict[str, object] = {"lr": 2e-5},
-        weight_decay: float = 0.01,
-        max_grad_norm: float = 1.0,
-        use_amp: bool = False,
-        accumulation_steps: int = 1,
-        compute_clinical: bool = False,
+        optimizer: Optimizer,
+        scheduler,
+        epochs: int,
+        output_path: str,
+        max_grad_norm: float,
+        use_amp: bool,
+        accumulation_steps: int,
+        compute_clinical: bool,
     ):
         """
-        Main training loop.
+        Main training loop. Assumes optimizer and scheduler are pre-configured.
         """
         self.accumulation_steps = accumulation_steps
         if use_amp and torch.cuda.is_available():
@@ -47,38 +44,6 @@ class Trainer:
             print("INFO: Using Automatic Mixed Precision (AMP).")
 
         steps_per_epoch = len(train_dataloader)
-        num_train_steps = int((steps_per_epoch / accumulation_steps) * epochs)
-        warmup_steps = math.ceil(num_train_steps * warmup_ratio)
-
-        # Prepare optimizer
-        param_optimizer = list(model.named_parameters())
-        no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
-        optimizer_grouped_parameters = [
-            {
-                "params": [
-                    p
-                    for n, p in param_optimizer
-                    if p.requires_grad and not any(nd in n for nd in no_decay)
-                ],
-                "weight_decay": weight_decay,
-            },
-            {
-                "params": [
-                    p
-                    for n, p in param_optimizer
-                    if p.requires_grad and any(nd in n for nd in no_decay)
-                ],
-                "weight_decay": 0.0,
-            },
-        ]
-
-        optimizer = optimizer_class(optimizer_grouped_parameters, **optimizer_params)
-        scheduler = self._get_scheduler(
-            optimizer,
-            scheduler=scheduler,
-            warmup_steps=warmup_steps,
-            t_total=num_train_steps,
-        )
 
         model = model.cuda()
 
