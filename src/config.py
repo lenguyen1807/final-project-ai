@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -9,6 +10,8 @@ class TrainingConfig:
 
     model_type: str
     run_name: str
+    encoder_model_name: Optional[str] = None
+    decoder_model_name: Optional[str] = None
     use_lora: bool = False
     compute_clinical: bool = False
     seed: int = 42

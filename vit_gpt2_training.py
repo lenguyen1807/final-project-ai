@@ -98,7 +98,16 @@ def run_vit_gpt2_custom_training():
     ]
 
     # 3. Create your custom optimizer and the scheduler
-    optimizer = torch.optim.AdamW(optimizer_grouped_parameters)
+    try:
+        import bitsandbytes.optim as bnb_optim
+
+        print("INFO: Using 8-bit AdamW optimizer (bitsandbytes).")
+        optimizer = bnb_optim.AdamW8bit(optimizer_grouped_parameters)
+    except ImportError:
+        print(
+            "WARNING: bitsandbytes not found. Falling back to standard AdamW optimizer."
+        )
+        optimizer = torch.optim.AdamW(optimizer_grouped_parameters)
 
     steps_per_epoch = len(train_dataloader)
     num_train_steps = int(

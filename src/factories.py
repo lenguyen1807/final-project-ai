@@ -1,7 +1,7 @@
 import math
 import os
 import random
-from typing import Dict, Type
+from typing import Dict
 
 import numpy as np
 import torch
@@ -34,43 +34,34 @@ def set_seed(seed):
 
 def create_model(config: TrainingConfig) -> torch.nn.Module:
     """Factory function to create a model based on the config."""
-    if config.model_type == "t5":
+    if config.model_type == "medblip_t5":
         model = MedBLIPModel_t5(t5_model="google/flan-t5-xl")
-    elif config.model_type == "biomedlm":
+    elif config.model_type == "medblip_biolm":
         model = MedBLIPModel_biomedlm(lm_model="stanford-crfm/BioMedLM")
     elif config.model_type == "vit_gpt2":
-        model = ViT_GPT2()
+        model = ViT_GPT2(use_lora=config.use_lora)
     elif config.model_type == "vit_biogpt":
-        model = ViT_GPT2(gpt2_model="microsoft/biogpt")
+        model = ViT_GPT2(
+            use_lora=config.use_lora, decoder_model_name="microsoft/biogpt"
+        )
+    elif config.model_type == "dino_gpt2":
+        model = ViT_GPT2(
+            use_lora=config.use_lora,
+            encoder_model_name="microsoft/rad-dino",
+        )
+    elif config.model_type == "dino_biogpt":
+        model = ViT_GPT2(
+            use_lora=config.use_lora,
+            decoder_model_name="microsoft/biogpt",
+            encoder_model_name="microsoft/rad-dino",
+        )
     else:
         raise ValueError(f"Unknown model type: {config.model_type}")
-
-    if config.use_lora:
-        from peft import LoraConfig, TaskType, get_peft_model
-
-        target_modules = (
-            ["c_attn", "c_proj"]
-            if "gpt2" in config.model_type or "biomedlm" in config.model_type
-            else ["q", "k", "v"]
-        )
-
-        lora_config = LoraConfig(
-            r=16,
-            lora_alpha=32,
-            target_modules=target_modules,
-            lora_dropout=0.1,
-            bias="none",
-            task_type=TaskType.CAUSAL_LM
-            if "gpt2" in config.model_type or "biomedlm" in config.model_type
-            else None,
-        )
-        model = get_peft_model(model, lora_config)
-        model.print_trainable_parameters()
 
     return model
 
 
-def create_dataloaders(config: TrainingConfig) -> (DataLoader, DataLoader):
+def create_dataloaders(config: TrainingConfig):
     """Factory function to create train and validation dataloaders."""
     data_transforms = v2.Compose(
         [
@@ -107,39 +98,9 @@ def create_dataloaders(config: TrainingConfig) -> (DataLoader, DataLoader):
     return trainloader, valloader
 
 
-def create_optimizer(
-    model: torch.nn.Module, config: TrainingConfig
-) -> (Optimizer, Dict):
-    """
-    Factory function to create a default optimizer.
-    Returns the optimizer and the parameter groups for customization.
-    """
-    param_optimizer = list(model.named_parameters())
-    no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
-    optimizer_grouped_parameters = [
-        {
-            "params": [
-                p
-                for n, p in param_optimizer
-                if p.requires_grad and not any(nd in n for nd in no_decay)
-            ],
-            "weight_decay": config.weight_decay,
-        },
-        {
-            "params": [
-                p
-                for n, p in param_optimizer
-                if p.requires_grad and any(nd in n for nd in no_decay)
-            ],
-            "weight_decay": 0.0,
-        },
-    ]
-
-    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=config.lr)
-    return optimizer, optimizer_grouped_parameters
-
-
-def create_scheduler(optimizer: Optimizer, config: TrainingConfig, num_train_steps: int):
+def create_scheduler(
+    optimizer: Optimizer, config: TrainingConfig, num_train_steps: int
+):
     """Factory function to create a learning rate scheduler."""
     warmup_steps = math.ceil(num_train_steps * config.warmup)
     scheduler = transformers.get_cosine_schedule_with_warmup(
