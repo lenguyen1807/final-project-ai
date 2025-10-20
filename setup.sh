@@ -7,6 +7,7 @@ set -x
 # -----------------------------
 sudo apt-get install swig -y
 pip install --upgrade pip
+pip install -q git+https://github.com/huggingface/transformers.git
 pip install bllipparser timm nltk peft==0.10.0 pyyaml bitsandbytes accelerate evaluate salesforce-lavis sentencepiece rouge_score bert-score rad-dino
 
 # Install NegBio from GitHub

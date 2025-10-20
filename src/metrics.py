@@ -173,6 +173,7 @@ def compute_linguistic_fluency(predictions, references):
     rouge = evaluate.load("rouge")
     meteor = evaluate.load("meteor")
     bertscore = evaluate.load("bertscore")
+    cider = evaluate.load("cider")
 
     # Compute metrics
     bleu_results = bleu.compute(
@@ -180,6 +181,7 @@ def compute_linguistic_fluency(predictions, references):
     )
     rouge_results = rouge.compute(predictions=predictions, references=references)
     meteor_results = meteor.compute(predictions=predictions, references=references)
+    cider_results = cider.compute(predictions=predictions, references=references)
 
     # BERTScore can be slow; ensure GPU is used if available
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -198,6 +200,7 @@ def compute_linguistic_fluency(predictions, references):
         "ROUGE-L": rouge_results["rougeL"],
         "METEOR": meteor_results["meteor"],
         "BERTScore-F1": np.mean(bertscore_results["f1"]),
+        "CIDEr": cider_results["cider"],
     }
 
 
@@ -223,7 +226,7 @@ def compute_all_metrics(predictions, references, compute_clinical: bool = False)
     fluency_metrics = compute_linguistic_fluency(
         filtered_predictions, filtered_references
     )
-    
+
     if compute_clinical:
         factuality_metrics = compute_clinical_factuality(
             filtered_predictions, filtered_references

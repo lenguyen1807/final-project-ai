@@ -62,13 +62,16 @@ def create_model(config: TrainingConfig) -> torch.nn.Module:
 
 def create_dataloaders(config: TrainingConfig):
     """Factory function to create train and validation dataloaders."""
-    data_transforms = v2.Compose(
-        [
-            v2.Resize((IMG_SIZE, IMG_SIZE), antialias=True),
-            v2.ToDtype(torch.float32, scale=True),
-            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    if config.model_type in ["medblip_t5", "medblip_biolm"]:
+        data_transforms = v2.Compose(
+            [
+                v2.Resize((IMG_SIZE, IMG_SIZE), antialias=True),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+    else:
+        data_transforms = v2.ToDtype(torch.float32, scale=True)
 
     print("INFO: Setting up data loaders for Kaggle Chest X-ray dataset...")
 
