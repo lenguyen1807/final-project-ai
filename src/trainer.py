@@ -62,7 +62,7 @@ class Trainer:
             )
             for train_iter, data in progress_bar:
                 if use_amp and torch.cuda.is_available():
-                    with torch.amp.autocast("cuda"):
+                    with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                         loss_dict = model(data)
                         loss = loss_dict["loss"] / self.accumulation_steps
                     scaler.scale(loss).backward()
@@ -192,15 +192,6 @@ class Trainer:
             all_predictions.extend(predictions)
             all_references.extend(references)
 
-            # For debugging, print one batch
-            if len(all_predictions) <= len(eval_data["reports"]):
-                print("\n--- Example Generation Batch ---")
-                for i in range(len(predictions)):
-                    print(f"  Reference: {references[i]}")
-                    print(f"  Prediction: {predictions[i]}")
-                    print("  --------------------")
-
-        print("--- Computing All Metrics ---")
         metrics = compute_all_metrics(all_predictions, all_references, compute_clinical)
         print("\n--- Evaluation Results ---")
         for key, value in metrics.items():

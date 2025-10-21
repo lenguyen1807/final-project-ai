@@ -2,20 +2,24 @@
 name = "final-project-ai"
 version = "0.1.0"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "accelerate>=1.10.1",
     "bert-score>=0.3.13",
     "bitsandbytes>=0.48.1",
     "evaluate>=0.4.6",
     "kaggle>=1.7.4.5",
+    "kagglehub>=0.3.13",
     "nltk>=3.9.2",
+    "numpy<2.0",
     "peft>=0.17.1",
+    "pycocoevalcap>=1.2",
     "rouge-score>=0.1.2",
+    "sacremoses>=0.1.1",
     "salesforce-lavis>=1.0.0",
     "scikit-learn>=1.7.2",
     "timm>=0.4.12",
     "torch>=2.9.0",
     "torchvision>=0.24.0",
-    "transformers>=4.57.1",
+    "transformers==4.33.2",
 ]

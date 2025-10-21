@@ -15,9 +15,9 @@ from src.models.medblip_t5 import MedBLIPModel_t5
 from src.models.medllm import MedBLIPModel_biomedlm
 from src.models.vit_gpt2 import ViT_GPT2
 
-KAGGLE_WORKING_DIR = os.environ.get("KAGGLE_DIR", "/kaggle/working")
-TRAIN_CSV_PATH = "/kaggle/input/chest-imagecaptioning/train_df.csv"
-VAL_CSV_PATH = "/kaggle/input/chest-imagecaptioning/val_df.csv"
+KAGGLE_WORKING_DIR = os.environ.get("KAGGLE_DIR", "./kaggle/working")
+TRAIN_CSV_PATH = "./kaggle/input/chest-imagecaptioning/train_df.csv"
+VAL_CSV_PATH = "./kaggle/input/chest-imagecaptioning/val_df.csv"
 IMG_SIZE = 224
 
 
@@ -62,16 +62,12 @@ def create_model(config: TrainingConfig) -> torch.nn.Module:
 
 def create_dataloaders(config: TrainingConfig):
     """Factory function to create train and validation dataloaders."""
-    if config.model_type in ["medblip_t5", "medblip_biolm"]:
-        data_transforms = v2.Compose(
-            [
-                v2.Resize((IMG_SIZE, IMG_SIZE), antialias=True),
-                v2.ToDtype(torch.float32, scale=True),
-                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
-    else:
-        data_transforms = v2.ToDtype(torch.float32, scale=True)
+    data_transforms = v2.Compose(
+        [
+            v2.Resize((IMG_SIZE, IMG_SIZE), antialias=True),
+            v2.ToDtype(torch.float32, scale=True),
+        ]
+    )
 
     print("INFO: Setting up data loaders for Kaggle Chest X-ray dataset...")
 

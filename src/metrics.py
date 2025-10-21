@@ -173,7 +173,7 @@ def compute_linguistic_fluency(predictions, references):
     rouge = evaluate.load("rouge")
     meteor = evaluate.load("meteor")
     bertscore = evaluate.load("bertscore")
-    cider = evaluate.load("cider")
+    cider = evaluate.load("sunhill/cider")
 
     # Compute metrics
     bleu_results = bleu.compute(
@@ -200,7 +200,7 @@ def compute_linguistic_fluency(predictions, references):
         "ROUGE-L": rouge_results["rougeL"],
         "METEOR": meteor_results["meteor"],
         "BERTScore-F1": np.mean(bertscore_results["f1"]),
-        "CIDEr": cider_results["cider"],
+        "CIDEr": cider_results["cider_score"],
     }
 
 
