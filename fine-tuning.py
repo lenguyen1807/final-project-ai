@@ -355,8 +355,8 @@ def train_vit_biogpt_lora():
         model_type="vit_biogpt",
         run_name="vit-biogpt-lora-finetune",
         num_epochs=10,
-        batch_size=32,
-        eval_batch_size=64,
+        batch_size=16,
+        eval_batch_size=32,
         lr=2e-4,  # This will be the LR for LoRA adapters
         use_lora=True,
         compute_clinical=False,
@@ -408,8 +408,8 @@ def train_vit_biogpt_decoder():
         model_type="vit_biogpt",
         run_name="vit-biogpt-decoder-side",
         num_epochs=10,
-        batch_size=32,
-        eval_batch_size=64,
+        batch_size=16,
+        eval_batch_size=32,
         lr=5e-5,  # This is the decoder LR
         use_lora=False,
         compute_clinical=False,
@@ -451,5 +451,5 @@ if __name__ == "__main__":
     # train_dino_biogpt_decoder()
 
     # --- LoRA (PEFT) Fine-Tuning Strategies ---
-    train_vit_gpt2_lora()
-    # train_vit_biogpt_lora()
+    # train_vit_gpt2_lora()
+    train_vit_biogpt_lora()

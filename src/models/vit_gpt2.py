@@ -170,16 +170,17 @@ class ViT_GPT2(nn.Module):
             if self.is_prefix_lm:
                 # This means we are using BioGPT
                 print("INFO: Setting LoRA targets for BioGPT decoder.")
-                target_modules.extend(
-                    [
-                        "decoder.layers.[0-9]+.self_attn.q_proj",
-                        "decoder.layers.[0-9]+.self_attn.k_proj",
-                        "decoder.layers.[0-9]+.self_attn.v_proj",
-                        "decoder.layers.[0-9]+.self_attn.out_proj",
-                        "decoder.layers.[0-9]+.fc1",  # MLP layer
-                        "decoder.layers.[0-9]+.fc2",  # MLP layer
-                    ]
-                )
+                for i in range(24):
+                    target_modules.extend(
+                        [
+                            f"decoder.layers.{i}.self_attn.q_proj",
+                            f"decoder.layers.{i}.self_attn.k_proj",
+                            f"decoder.layers.{i}.self_attn.v_proj",
+                            f"decoder.layers.{i}.self_attn.out_proj",
+                            f"decoder.layers.{i}.fc1",  # MLP layer
+                            f"decoder.layers.{i}.fc2",  # MLP layer
+                        ]
+                    )
             else:
                 # This means we are using GPT-2 (or a compatible model)
                 print("INFO: Setting LoRA targets for GPT-2 decoder.")
@@ -214,11 +215,6 @@ class ViT_GPT2(nn.Module):
             # Wrap the model with PEFT
             self.model = get_peft_model(self.model, peft_config)
             self.model.print_trainable_parameters()
-        else:
-            trainable_params_count = sum(
-                p.numel() for p in self.model.parameters() if p.requires_grad
-            )
-            print(f"Total number of trainable parameters: {trainable_params_count}")
 
     @property
     def device(self) -> torch.device:

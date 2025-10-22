@@ -40,16 +40,14 @@ class Trainer:
         """
         self.accumulation_steps = accumulation_steps
         if use_amp and torch.cuda.is_available():
-            scaler = torch.amp.GradScaler("cuda")
-            print("INFO: Using Automatic Mixed Precision (AMP).")
+            # NOTE: GradScaler is NOT needed for bfloat16, only for float16.
+            # We removed the GradScaler initialization.
+            print("INFO: Using Automatic Mixed Precision (AMP) with bfloat16.")
 
         steps_per_epoch = len(train_dataloader)
-
         model = model.cuda()
-
         for epoch in range(epochs):
             print(f"--- Starting Epoch {epoch + 1}/{epochs} ---")
-
             # --- Training Step ---
             model.train()
             total_loss = 0
@@ -65,7 +63,8 @@ class Trainer:
                     with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                         loss_dict = model(data)
                         loss = loss_dict["loss"] / self.accumulation_steps
-                    scaler.scale(loss).backward()
+                    # We call backward directly on the loss. No scaler.
+                    loss.backward()
                 else:
                     loss_dict = model(data)
                     loss = loss_dict["loss"] / self.accumulation_steps
@@ -75,12 +74,14 @@ class Trainer:
 
                 if (train_iter + 1) % self.accumulation_steps == 0:
                     if use_amp and torch.cuda.is_available():
-                        scaler.unscale_(optimizer)
+                        # We don't need to unscale before clipping
+                        # as there is no scaler.
                         torch.nn.utils.clip_grad_norm_(
                             model.parameters(), max_grad_norm
                         )
-                        scaler.step(optimizer)
-                        scaler.update()
+                        # We call step directly on the optimizer.
+                        optimizer.step()
+                        # No scaler.update() is needed.
                     else:
                         torch.nn.utils.clip_grad_norm_(
                             model.parameters(), max_grad_norm
@@ -102,16 +103,13 @@ class Trainer:
             # --- Evaluation Step ---
             print(f"--- Running Evaluation for Epoch {epoch + 1} ---")
             metrics = self.evaluate(model, eval_dataloader, compute_clinical)
-
             try:
                 # Ensure output directory exists
                 os.makedirs(output_path, exist_ok=True)
-
                 # Save metrics to a file
                 metrics_path = os.path.join(
                     output_path, f"epoch_{epoch + 1}_metrics.json"
                 )
-
                 with open(metrics_path, "w") as f:
                     json.dump(metrics, f, indent=4)
                 print(f"Evaluation metrics saved to {metrics_path}")
@@ -157,7 +155,6 @@ class Trainer:
                 }
                 for k, v in label_replacements.items():
                     label = label.replace(k, v)
-
                 prompt = (
                     text
                     + "Question: What will this subject be diagnosed with? Answer: "
@@ -171,8 +168,8 @@ class Trainer:
         for eval_data in progress_bar:
             images = eval_data["images"].cuda().half()
             reports = eval_data["reports"]
-
             generate_input = {"images": images}
+
             if is_captioning_model:
                 # For captioning, references are the full reports.
                 references = reports
@@ -193,11 +190,11 @@ class Trainer:
             all_references.extend(references)
 
         metrics = compute_all_metrics(all_predictions, all_references, compute_clinical)
+
         print("\n--- Evaluation Results ---")
         for key, value in metrics.items():
             print(f"  {key}: {value:.4f}")
         print("--------------------------\n")
-
         return metrics
 
     @staticmethod
