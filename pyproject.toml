@@ -12,7 +12,7 @@ dependencies = [
     "kagglehub>=0.3.13",
     "nltk>=3.9.2",
     "numpy<2.0",
-    "peft>=0.17.1",
+    "peft==0.10.0",
     "pycocoevalcap>=1.2",
     "rouge-score>=0.1.2",
     "sacremoses>=0.1.1",
