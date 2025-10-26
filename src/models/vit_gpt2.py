@@ -154,17 +154,20 @@ class ViT_GPT2(nn.Module):
             # We build the list of targets based on the *actual* models loaded.
             # We use wildcard matching (`*`) which PEFT supports.
 
-            # 1. Add Encoder (ViT / DINO) targets
-            # These are common for all model combinations
-            for i in range(12):
-                target_modules = [
-                    f"encoder.encoder.layer.{i}.attention.attention.query",
-                    f"encoder.encoder.layer.{i}.attention.attention.key",
-                    f"encoder.encoder.layer.{i}.attention.attention.value",
-                    f"encoder.encoder.layer.{i}.attention.output.dense",
-                    f"encoder.encoder.layer.{i}.intermediate.dense",
-                    f"encoder.encoder.layer.{i}.output.dense",
-                ]
+            target_modules = []
+            if encoder_model_name != "microsoft/rad-dino":
+                # These are common for all model combinations
+                for i in range(12):
+                    target_modules.extend(
+                        [
+                            f"encoder.encoder.layer.{i}.attention.attention.query",
+                            f"encoder.encoder.layer.{i}.attention.attention.key",
+                            f"encoder.encoder.layer.{i}.attention.attention.value",
+                            f"encoder.encoder.layer.{i}.attention.output.dense",
+                            f"encoder.encoder.layer.{i}.intermediate.dense",
+                            f"encoder.encoder.layer.{i}.output.dense",
+                        ]
+                    )
 
             # 2. Add Decoder targets (conditionally)
             if self.is_prefix_lm:
